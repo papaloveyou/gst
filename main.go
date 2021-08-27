@@ -83,7 +83,7 @@ func main() {
 	if err := app.Run(os.Args); err != nil {
 		log.Fatal(err)
 	}
-	runtime.Goexit()
+	//runtime.Goexit()
 }
 
 func getExecRet(cmdStr string) (result string) {
