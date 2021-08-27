@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -22,6 +23,7 @@ var path, bucket, suffix string
 var bytesN int64
 
 func main() {
+	runtime.GOMAXPROCS(runtime.NumCPU())
 	app := app.New()
 	app.Action = func(c *cli.Context) (err error) {
 		if c.NArg() != 2 {
@@ -81,6 +83,7 @@ func main() {
 	if err := app.Run(os.Args); err != nil {
 		log.Fatal(err)
 	}
+	runtime.Goexit()
 }
 
 func getExecRet(cmdStr string) (result string) {
@@ -111,13 +114,16 @@ func workTrans(filename string) {
 	//println("=>", filename)
 	fmt.Printf("%v Start to transfer files %v\n", time.Now().Format("2006-01-02 15:04:05"), path+filename)
 	cmd := exec.Command("/root/google-cloud-sdk/bin/gsutil", "mv", path+filename, "gs://"+bucket)
+	//cmd := exec.Command("/usr/bin/python3", "/root/google-cloud-sdk/bin/bootstrapping/gsutil.py", "mv", path+filename, "gs://"+bucket)
 	var out, stderr bytes.Buffer
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr
 	err := cmd.Run()
+	fmt.Printf("%s\n", out.String())
 
 	if err != nil && stderr.Len() > 0 {
 		fmt.Println(fmt.Sprint(err) + ": " + stderr.String())
 	}
-	//fmt.Println(out.String())
+	//fmt.Println(out.Len())
+	//fmt.Printf("%s\n", out.String())
 }
