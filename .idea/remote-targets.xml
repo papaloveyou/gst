@@ -15,6 +15,19 @@
           </config>
         </ContributedStateBase>
       </target>
+      <target name="root@34.215.68.47:22" type="ssh/sftp">
+        <config>
+          <option name="projectRootOnTarget" value="/root/gst" />
+          <option name="serverName" value="root@34.215.68.47:22 password" />
+        </config>
+        <ContributedStateBase type="GoLanguageRuntime">
+          <config>
+            <option name="goPath" value="/root/go" />
+            <option name="goRoot" value="/snap/bin/go" />
+            <option name="goVersion" value="go1.16.6 linux/arm64" />
+          </config>
+        </ContributedStateBase>
+      </target>
     </targets>
   </component>
 </project>

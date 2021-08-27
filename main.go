@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/urfave/cli/v2"
 	"gst/internal/app"
@@ -14,11 +15,11 @@ import (
 	"time"
 )
 
-const MV = "gsutil mv %v%v gs://%v"
+const MV = "/root/google-cloud-sdk/bin/gsutil mv %v%v gs://%v"
 
 //var m = make(map[string]string)
 var path, bucket, suffix string
-var bytes int64
+var bytesN int64
 
 func main() {
 	app := app.New()
@@ -37,12 +38,12 @@ func main() {
 
 		path, _ = filepath.Split(c.Args().First())
 		//path, _ = filepath.Split("/root/qq/")
-		suffix = strings.ToUpper(c.String("ext"))
-		bytes = utils.ParseSize(c.String("size"))
+		suffix = strings.ToLower(c.String("ext"))
+		bytesN = utils.ParseSize(c.String("size"))
 		bucket = c.Args().Get(1)
 		mtime := c.Uint("time")
 		var i uint = mtime
-		fmt.Printf("path: %v bucket: %v suffix: %v size: %v  time: %v\n\n", path, bucket, suffix, bytes, mtime)
+		fmt.Printf("path: %v bucket: %v suffix: %v size: %v  time: %v\n\n", path, bucket, suffix, bytesN, mtime)
 		//fmt.Print(getExecRet("ps -ef"))
 		for {
 			if i < mtime {
@@ -57,15 +58,17 @@ func main() {
 
 				for _, file := range files {
 					if !file.IsDir() {
-						if file.Size() >= bytes && strings.HasSuffix(strings.ToUpper(file.Name()), suffix) {
+						if file.Size() >= bytesN && strings.HasSuffix(strings.ToLower(file.Name()), suffix) {
 							if isProcessing(file.Name()) {
+								fmt.Printf("The same file name exists: %s\n", file.Name())
 								continue
 							}
 							//fmt.Printf("%v Start to transfer files %v\n", time.Now().Format("2006-01-02 15:04:05"), path+file.Name())
-							go work(file.Name())
+							go workTrans(file.Name())
 						}
 					}
 				}
+				time.Sleep(time.Second * 3)
 				fmt.Printf("Perform the next scan after %d minutes.\n", mtime)
 				i = 1
 				time.Sleep(time.Minute)
@@ -81,11 +84,20 @@ func main() {
 }
 
 func getExecRet(cmdStr string) (result string) {
-	out, err := exec.Command("sh", "-c", cmdStr).Output()
-	if err != nil {
-		log.Fatal(err)
+	cmd := exec.Command("sh", "-c", cmdStr)
+	//out, err := exec.Command("sh", "-c", cmdStr).Output()
+	//output, err := cmd.CombinedOutput()
+	var out, stderr bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &stderr
+	err := cmd.Run()
+
+	if err != nil && stderr.Len() > 0 {
+		//fmt.Printf("err: %v\n", err)
+		fmt.Println(fmt.Sprint(err) + ": " + stderr.String())
+		//fmt.Printf("err len: %d\n", stderr.Len())
 	}
-	return fmt.Sprintf("%s", out)
+	return fmt.Sprintf("%s", out.String())
 }
 
 func isProcessing(filename string) bool {
@@ -93,13 +105,19 @@ func isProcessing(filename string) bool {
 	return ok
 }
 
-func work(filename string) {
-	x := fmt.Sprintf(MV, path, filename, bucket)
-
+func workTrans(filename string) {
+	//x := fmt.Sprintf(MV, path, filename, bucket)
+	//fmt.Println(x)
 	//println("=>", filename)
 	fmt.Printf("%v Start to transfer files %v\n", time.Now().Format("2006-01-02 15:04:05"), path+filename)
-	cmd := exec.Command("sh", "-c", x)
-	if err := cmd.Run(); err != nil {
-		println(err.Error())
+	cmd := exec.Command("/root/google-cloud-sdk/bin/gsutil", "mv", path+filename, "gs://"+bucket)
+	var out, stderr bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &stderr
+	err := cmd.Run()
+
+	if err != nil && stderr.Len() > 0 {
+		fmt.Println(fmt.Sprint(err) + ": " + stderr.String())
 	}
+	//fmt.Println(out.String())
 }
