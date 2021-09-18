@@ -119,7 +119,7 @@ func workTrans(filename string) {
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr
 	err := cmd.Run()
-	fmt.Printf("%s\n", out.String())
+	fmt.Printf("%s transfer Done,%s\n", filename, out.String())
 
 	if err != nil && stderr.Len() > 0 {
 		fmt.Println(fmt.Sprint(err) + ": " + stderr.String())
