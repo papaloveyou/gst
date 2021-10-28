@@ -133,13 +133,11 @@ func getExecRet(cmdStr string) (result string) {
 
 func isProcessing(filename, stype string) bool {
 	var ok bool
-	switch {
-	case stype == "gcs":
+	switch stype {
+	case "gcs":
 		ok = strings.Contains(getExecRet("ps -ef|grep 'gsutil'|grep -v 'grep'"), filename)
-	case stype == "s3":
+	case "s3":
 		ok = strings.Contains(getExecRet("ps -ef|grep 'aws'|grep -v 'grep'"), filename)
-	default:
-		ok = false
 	}
 	return ok
 }
