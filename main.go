@@ -169,7 +169,7 @@ func workTrans(filename, stype string) {
 		getCnt, _ = strconv.Atoi(getExecRet("/root/google-cloud-sdk/bin/gsutil ls gs://" + undonebucket[0] + " |wc -l"))
 	}
 
-	if getCnt < 1100 {
+	if getCnt < 1100 && len(undonebucket) != 0 {
 		cmdString := fmt.Sprintf(GCS, path, filename, undonebucket[0])
 		if stype == "s3" {
 			cmdString = fmt.Sprintf(S3, path, filename, undonebucket[0])
@@ -189,7 +189,7 @@ func workTrans(filename, stype string) {
 		if err != nil && stderr.Len() > 0 {
 			fmt.Println(fmt.Sprint(err) + ": " + stderr.String())
 		}
-	} else {
+	} else if len(undonebucket) != 0 {
 		//if len(undonebucket) != 0{
 		doneBucket = append(doneBucket, undonebucket[0])
 		undonebucket = undonebucket[1:]
