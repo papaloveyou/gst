@@ -80,6 +80,9 @@ func main() {
 									continue
 								}
 								//fmt.Printf("%v Start to transfer files %v\n", time.Now().Format("2006-01-02 15:04:05"), path+file.Name())
+								if len(undonebucket) == 0 {
+									continue
+								}
 								go workTrans(file.Name(), strings.ToLower(c.String("stype")))
 								time.Sleep(time.Second * 5)
 							}
@@ -153,7 +156,7 @@ func workTrans(filename, stype string) {
 				doneStr += ","
 			}
 		}
-		fmt.Println("All bucket transfer done.\nBucket is " + doneStr)
+		fmt.Println("All bucket transfer done.Bucket is:", doneStr)
 		return
 	}
 	var getCnt int
@@ -167,21 +170,8 @@ func workTrans(filename, stype string) {
 	case "gcs":
 		getCnt, _ = strconv.Atoi(getExecRet("/root/google-cloud-sdk/bin/gsutil ls gs://" + undonebucket[0] + " |wc -l"))
 	}
-	if getCnt > 1100 {
-		doneBucket = append(doneBucket, undonebucket[0])
-		undonebucket = undonebucket[1:]
-		if len(undonebucket) == 0 {
-			var doneStr string
-			for i := range doneBucket {
-				doneStr += doneBucket[i]
-				if i+1 != len(doneBucket) {
-					doneStr += ","
-				}
-			}
-			fmt.Println("All bucket transfer done.\nBucket is " + doneStr)
-			return
-		}
-	} else {
+
+	if getCnt < 1100 {
 		cmdString := fmt.Sprintf(GCS, path, filename, undonebucket[0])
 		if stype == "s3" {
 			cmdString = fmt.Sprintf(S3, path, filename, undonebucket[0])
@@ -201,5 +191,22 @@ func workTrans(filename, stype string) {
 		if err != nil && stderr.Len() > 0 {
 			fmt.Println(fmt.Sprint(err) + ": " + stderr.String())
 		}
+	} else {
+		//if len(undonebucket) != 0{
+		doneBucket = append(doneBucket, undonebucket[0])
+		undonebucket = undonebucket[1:]
+		/*}
+		if len(undonebucket) == 0 {
+			var doneStr string
+			for i := range doneBucket {
+				doneStr += doneBucket[i]
+				if i+1 != len(doneBucket) {
+					doneStr += ","
+				}
+			}
+			fmt.Println("All bucket transfer done.\nBucket is " + doneStr)
+			return
+		}*/
 	}
+
 }
