@@ -84,7 +84,7 @@ func main() {
 									continue
 								}
 								go workTrans(file.Name(), strings.ToLower(c.String("stype")))
-								time.Sleep(time.Second * 5)
+								time.Sleep(time.Second * 10)
 							}
 						}
 					}
