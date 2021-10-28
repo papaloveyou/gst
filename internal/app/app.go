@@ -28,6 +28,12 @@ func New() (app *cli.App) {
 				Usage:   "files filter suffix",
 				Value:   "gz",
 			},
+			&cli.StringFlag{
+				Name:    "stype",
+				Aliases: []string{"z"},
+				Usage:   "save Service provider",
+				Value:   "gcs",
+			},
 		},
 	}
 	return
