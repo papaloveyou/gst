@@ -12,18 +12,15 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"strings"
 	"time"
 )
 
-const GCS = "/root/google-cloud-sdk/bin/gsutil mv %v%v gs://%v"
-const S3 = "aws s3 mv %v%v s3://%v --storage-class STANDARD_IA"
+const MV = "/root/google-cloud-sdk/bin/gsutil mv %v%v gs://%v"
 
 //var m = make(map[string]string)
 var path, bucket, suffix string
 var bytesN int64
-var undonebucket, doneBucket []string
 
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
@@ -46,10 +43,9 @@ func main() {
 		suffix = strings.ToLower(c.String("ext"))
 		bytesN = utils.ParseSize(c.String("size"))
 		bucket = c.Args().Get(1)
-		undonebucket = strings.Split(bucket, ",")
 		mtime := c.Uint("time")
 		var i uint = mtime
-		fmt.Printf("path: %v bucket: %v suffix: %v size: %v  time: %v\n\n", path, undonebucket[0], suffix, bytesN, mtime)
+		fmt.Printf("path: %v bucket: %v suffix: %v size: %v  time: %v\n\n", path, bucket, suffix, bytesN, mtime)
 		//fmt.Print(getExecRet("ps -ef"))
 		for {
 			if i < mtime {
@@ -62,40 +58,19 @@ func main() {
 			if files, err := ioutil.ReadDir(path); err == nil {
 				fmt.Printf("%v Scan folder %v\n", time.Now().Format("2006-01-02 15:04:05"), path)
 
-				if len(undonebucket) == 0 {
-					var doneStr string
-					for i := range doneBucket {
-						doneStr += doneBucket[i]
-						if i+1 != len(doneBucket) {
-							doneStr += ","
-						}
-					}
-					fmt.Println("All bucket transfer done.\nBucket is " + doneStr)
-				} else {
-					for _, file := range files {
-						if !file.IsDir() {
-							if file.Size() >= bytesN && strings.HasSuffix(strings.ToLower(file.Name()), suffix) {
-								if isProcessing(file.Name(), strings.ToLower(c.String("stype"))) {
-									fmt.Printf("The same file name exists: %s\n", file.Name())
-									continue
-								}
-								//fmt.Printf("%v Start to transfer files %v\n", time.Now().Format("2006-01-02 15:04:05"), path+file.Name())
-								go workTrans(file.Name(), strings.ToLower(c.String("stype")))
-								time.Sleep(time.Second * 5)
+				for _, file := range files {
+					if !file.IsDir() {
+						if file.Size() >= bytesN && strings.HasSuffix(strings.ToLower(file.Name()), suffix) {
+							if isProcessing(file.Name()) {
+								fmt.Printf("The same file name exists: %s\n", file.Name())
+								continue
 							}
+							//fmt.Printf("%v Start to transfer files %v\n", time.Now().Format("2006-01-02 15:04:05"), path+file.Name())
+							go workTrans(file.Name())
 						}
 					}
-					time.Sleep(time.Second * 5)
-					var doneStr string
-					for i := range doneBucket {
-						doneStr += doneBucket[i]
-						if i+1 != len(doneBucket) {
-							doneStr += ","
-						}
-					}
-					fmt.Println("Done bucket is:", doneStr)
 				}
-				time.Sleep(time.Second * 5)
+				time.Sleep(time.Second * 3)
 				fmt.Printf("Perform the next scan after %d minutes.\n", mtime)
 				i = 1
 				time.Sleep(time.Minute)
@@ -128,78 +103,27 @@ func getExecRet(cmdStr string) (result string) {
 	return fmt.Sprintf("%s", out.String())
 }
 
-func isProcessing(filename, stype string) bool {
-	var ok bool
-	switch {
-	case stype == "gcs":
-		ok = strings.Contains(getExecRet("ps -ef|grep 'gsutil'|grep -v 'grep'"), filename)
-	case stype == "s3":
-		ok = strings.Contains(getExecRet("ps -ef|grep 'aws'|grep -v 'grep'"), filename)
-	default:
-		ok = false
-	}
+func isProcessing(filename string) bool {
+	ok := strings.Contains(getExecRet("ps -ef|grep 'gsutil'|grep -v 'grep'"), filename)
 	return ok
 }
 
-func workTrans(filename, stype string) {
+func workTrans(filename string) {
 	//x := fmt.Sprintf(MV, path, filename, bucket)
 	//fmt.Println(x)
 	//println("=>", filename)
-	if len(undonebucket) == 0 {
-		var doneStr string
-		for i := range doneBucket {
-			doneStr += doneBucket[i]
-			if i+1 != len(doneBucket) {
-				doneStr += ","
-			}
-		}
-		fmt.Println("All bucket transfer done.\nBucket is " + doneStr)
-		return
-	}
-	var getCnt int
-	/*getS3Count := getExecRet("aws s3 ls s3://" + bucket + "|wc -l")
-	getS3CountInt, getS3Err := strconv.Atoi(getS3Count)
-	getGcsCount := getExecRet("/root/google-cloud-sdk/bin/gsutil ls gs://" + bucket + " |wc -l")
-	getGcsCountInt, getGcsErr := strconv.Atoi(getGcsCount)*/
-	switch stype {
-	case "s3":
-		getCnt, _ = strconv.Atoi(getExecRet("aws s3 ls s3://" + undonebucket[0] + "|wc -l"))
-	case "gcs":
-		getCnt, _ = strconv.Atoi(getExecRet("/root/google-cloud-sdk/bin/gsutil ls gs://" + undonebucket[0] + " |wc -l"))
-	}
-	if getCnt > 1100 {
-		doneBucket = append(doneBucket, undonebucket[0])
-		undonebucket = undonebucket[1:]
-		if len(undonebucket) == 0 {
-			var doneStr string
-			for i := range doneBucket {
-				doneStr += doneBucket[i]
-				if i+1 != len(doneBucket) {
-					doneStr += ","
-				}
-			}
-			fmt.Println("All bucket transfer done.\nBucket is " + doneStr)
-			return
-		}
-	} else {
-		cmdString := fmt.Sprintf(GCS, path, filename, undonebucket[0])
-		if stype == "s3" {
-			cmdString = fmt.Sprintf(S3, path, filename, undonebucket[0])
-		}
+	fmt.Printf("%v Start to transfer files %v\n", time.Now().Format("2006-01-02 15:04:05"), path+filename)
+	cmd := exec.Command("/root/google-cloud-sdk/bin/gsutil", "mv", path+filename, "gs://"+bucket)
+	//cmd := exec.Command("/usr/bin/python3", "/root/google-cloud-sdk/bin/bootstrapping/gsutil.py", "mv", path+filename, "gs://"+bucket)
+	var out, stderr bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &stderr
+	err := cmd.Run()
+	fmt.Printf("%s\n", out.String())
 
-		fmt.Printf("%v Start to transfer files %v\n", time.Now().Format("2006-01-02 15:04:05"), path+filename)
-
-		cmd := exec.Command("sh", "-c", cmdString)
-		//cmd := exec.Command("/root/google-cloud-sdk/bin/gsutil", "mv", path+filename, "gs://"+bucket)
-		//cmd := exec.Command("/usr/bin/python3", "/root/google-cloud-sdk/bin/bootstrapping/gsutil.py", "mv", path+filename, "gs://"+bucket)
-		var out, stderr bytes.Buffer
-		cmd.Stdout = &out
-		cmd.Stderr = &stderr
-		err := cmd.Run()
-		fmt.Printf("%s\n", out.String())
-
-		if err != nil && stderr.Len() > 0 {
-			fmt.Println(fmt.Sprint(err) + ": " + stderr.String())
-		}
+	if err != nil && stderr.Len() > 0 {
+		fmt.Println(fmt.Sprint(err) + ": " + stderr.String())
 	}
+	//fmt.Println(out.Len())
+	//fmt.Printf("%s\n", out.String())
 }
