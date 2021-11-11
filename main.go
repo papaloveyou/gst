@@ -18,7 +18,7 @@ import (
 )
 
 const GCS = "/root/google-cloud-sdk/bin/gsutil mv %v%v gs://%v"
-const S3 = "aws s3 mv %v%v s3://%v --storage-class STANDARD_IA"
+const S3 = "aws s3 mv %v%v s3://%v --storage-class STANDARD_IA --acl bucket-owner-full-control"
 
 //var m = make(map[string]string)
 var path, bucket, suffix string
