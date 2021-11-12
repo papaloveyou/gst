@@ -24,6 +24,7 @@ const S3 = "aws s3 mv %v%v s3://%v --storage-class STANDARD_IA --acl bucket-owne
 var path, bucket, suffix string
 var bytesN int64
 var undonebucket, doneBucket []string
+var maxCnt = 2000
 
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
@@ -169,7 +170,7 @@ func workTrans(filename, stype string) {
 		getCnt, _ = strconv.Atoi(getExecRet("/root/google-cloud-sdk/bin/gsutil ls gs://" + undonebucket[0] + " |wc -l"))
 	}
 
-	if getCnt < 2000 && len(undonebucket) != 0 {
+	if getCnt < maxCnt && len(undonebucket) > 0 {
 		cmdString := fmt.Sprintf(GCS, path, filename, undonebucket[0])
 		if stype == "s3" {
 			cmdString = fmt.Sprintf(S3, path, filename, undonebucket[0])
@@ -189,7 +190,7 @@ func workTrans(filename, stype string) {
 		if err != nil && stderr.Len() > 0 {
 			fmt.Println(fmt.Sprint(err) + ": " + stderr.String())
 		}
-	} else if len(undonebucket) != 0 {
+	} else if len(undonebucket) > 0 {
 		//if len(undonebucket) != 0{
 		doneBucket = append(doneBucket, undonebucket[0])
 		undonebucket = undonebucket[1:]
