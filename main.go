@@ -24,7 +24,7 @@ const S3 = "aws s3 mv %v%v s3://%v --storage-class STANDARD_IA --acl bucket-owne
 var path, bucket, suffix string
 var bytesN int64
 var undonebucket, doneBucket []string
-var maxCnt = 2000
+var maxCnt = 4000
 
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
