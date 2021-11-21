@@ -97,7 +97,7 @@ func main() {
 							doneStr += ","
 						}
 					}
-					fmt.Println("Done bucket is:", doneStr)
+					fmt.Println("The completed buckets are:", doneStr)
 				}
 				time.Sleep(time.Second * 5)
 				fmt.Printf("Perform the next scan after %d minutes.\n", mtime)
